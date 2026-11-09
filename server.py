@@ -292,17 +292,31 @@ def client_running():
     return bool(client_proc and client_proc.poll() is None)
 
 
+class SingleServer(ThreadingHTTPServer):
+    # On Windows, address reuse lets a second copy bind the same port silently.
+    allow_reuse_address = False
+    daemon_threads = True
+
+
 def main():
     global ITEMS, ITEM_IDS, PORT
     for a in sys.argv:
         if a.startswith("--port="):
             PORT = int(a.split("=", 1)[1])
+    link = f"http://{HOST}:{PORT}"
+    try:
+        srv = SingleServer((HOST, PORT), Handler)
+    except OSError:
+        # another copy is already running: never run two at once (they'd fight over the data)
+        print("\n  The tool is already running in another window - opening it in the browser.")
+        print("  (If you can't find that window, close all black windows and start again.)\n")
+        if "--no-browser" not in sys.argv:
+            webbrowser.open(link)
+        return
     ITEMS = items_mod.build(DATA, force="--rebuild-items" in sys.argv)
     ITEM_IDS = {i["id"] for i in ITEMS}
     if "--no-live" not in sys.argv:
         start_live_feed()
-    srv = ThreadingHTTPServer((HOST, PORT), Handler)
-    link = f"http://{HOST}:{PORT}"
     print(f"\n  Albion Black Market helper is running:  {link}")
     if "--no-client" not in sys.argv:
         start_client(link)
