@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Black Market Flipper</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="logo">BM</div>
+    <div>
+      <h1>بلاك ماركت فليبر</h1>
+      <div class="sub">سيرفر أوروبا · كل الحسابات بالسيلفر بالظبط</div>
+    </div>
+  </div>
+  <div class="status">
+    <span class="chip" id="st-refresh">آخر تحديث: —</span>
+    <span class="chip" id="st-client" title="Albion Data Client بتاعك">الكلاينت: —</span>
+    <span class="chip" id="st-live" title="سكانات كل اللاعبين (وصاحبك) بتوصل هنا على طول بالكميات">اللايف: —</span>
+    <button class="btn primary" id="btn-refresh">تحديث الأسعار</button>
+  </div>
+  <div class="progress" id="progress" hidden><div class="bar" id="progress-bar"></div><span id="progress-text"></span></div>
+</header>
+
+<main class="layout">
+  <aside class="filters" id="filters">
+    <section>
+      <h3>حسابك</h3>
+      <label class="switch"><input type="checkbox" id="f-premium"><span>عندي بريميوم</span></label>
+      <div class="hint" id="tax-hint">ضريبة البيع للبلاك ماركت: 8%</div>
+      <div class="seg" id="f-mode">
+        <button data-v="instant" class="on">شرا فوري</button>
+        <button data-v="order">أوردر شرا</button>
+      </div>
+      <div class="hint" id="mode-hint">بتشتري من أرخص سيل أوردر، من غير أي رسوم.</div>
+    </section>
+
+    <section>
+      <h3>عمر الداتا (الفرص)</h3>
+      <div class="seg" id="f-age">
+        <button data-v="1">1س</button><button data-v="3">3س</button>
+        <button data-v="6" class="on">6س</button><button data-v="12">12س</button><button data-v="24">24س</button>
+      </div>
+      <div class="hint">أوردرات البلاك ماركت بتخلص بسرعة، والداتا الأحدث أضمن.</div>
+    </section>
+
+    <section>
+      <h3>هشتري منين</h3>
+      <div class="chips" id="f-cities"></div>
+    </section>
+
+    <section>
+      <h3>التير</h3>
+      <div class="chips" id="f-tiers"></div>
+      <h3>الإنشانت</h3>
+      <div class="chips" id="f-ench"></div>
+      <h3>النوع</h3>
+      <div class="chips" id="f-cats"></div>
+    </section>
+
+    <section class="nums">
+      <label>أقل ربح للقطعة<input type="number" id="f-minprofit" value="5000" min="0" step="500"></label>
+      <label>أقل نسبة ربح %<input type="number" id="f-minmargin" value="5" min="0" step="1"></label>
+      <label>أقصى سعر شرا (فلوسك)<input type="number" id="f-maxbuy" placeholder="مفيش حد" min="0" step="10000"></label>
+      <label>أقل مبيعات/يوم في البلاك ماركت<input type="number" id="f-minsold" value="0" min="0" step="1"></label>
+      <label class="switch"><input type="checkbox" id="f-best" checked><span>أحسن كواليتي بس لكل ايتم ومدينة</span></label>
+    </section>
+  </aside>
+
+  <section class="content">
+    <div class="tabs">
+      <button class="tab on" data-tab="list">الفرص</button>
+      <button class="tab" data-tab="scan">اسكان إيه؟</button>
+      <button class="tab" data-tab="plan">خطة الرحلة</button>
+      <input type="search" id="f-search" placeholder="دوّر باسم الايتم… (مثلاً Broadsword)">
+    </div>
+
+    <div id="tab-list">
+      <div class="kpis" id="kpis"></div>
+      <div class="table-wrap">
+        <table class="grid" id="grid">
+          <thead><tr>
+            <th>الايتم</th>
+            <th data-sort="city">اشتري من</th>
+            <th data-sort="buy_price" class="num">سعر الشرا</th>
+            <th data-sort="bm_price" class="num">البلاك ماركت</th>
+            <th data-sort="profit" class="num">ربح القطعة</th>
+            <th data-sort="qty" class="num">الكمية</th>
+            <th data-sort="total" class="num">الربح الكلي</th>
+            <th data-sort="margin" class="num">النسبة</th>
+            <th data-sort="per_kg" class="num">ربح/كجم</th>
+            <th data-sort="sold_day" class="num">مبيعات/يوم</th>
+            <th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty" id="empty" hidden></div>
+      </div>
+      <div class="more" id="more" hidden><button class="btn" id="btn-more">اعرض أكتر</button></div>
+    </div>
+
+    <div id="tab-scan" hidden>
+      <div class="plan-form three">
+        <label>داتا البلاك ماركت مش أقدم من
+          <select id="s-age"><option value="1">ساعة</option><option value="3" selected>3 ساعات</option><option value="6">6 ساعات</option></select>
+        </label>
+        <label>أقل ربح متوقع للقطعة<input type="number" id="s-min" value="10000" min="0" step="1000"></label>
+        <label>رتّب حسب
+          <select id="s-sort"><option value="potential">أكبر ربح كلي محتمل</option><option value="margin">أعلى نسبة</option><option value="profit">أعلى ربح للقطعة</option></select>
+        </label>
+      </div>
+      <div class="hint">دي حاجات البلاك ماركت طالبها <b>دلوقتي</b> (من سكانك أو اللايف)، وآخر سعر معروف في المدينة بيقول إن فيها فلوس، بس سعر المدينة ده قديم أو جاي من الداتا العامة. روح اسكانها في المدينة دي عشان تتأكد. بيستخدم فلاتر المدن والتير والنوع اللي على الجنب.</div>
+      <div id="scan-out"></div>
+    </div>
+
+    <div id="tab-plan" hidden>
+      <div class="plan-form">
+        <label>المدينة اللي انت فيها<select id="p-city"></select></label>
+        <label>فلوسك (سيلفر)<input type="number" id="p-budget" value="1000000" min="0" step="50000"></label>
+        <label>الوزن اللي تقدر تشيله (كجم)<input type="number" id="p-weight" value="500" min="0" step="10"></label>
+        <label>رتّب حسب
+          <select id="p-sort"><option value="total">أعلى ربح كلي</option><option value="margin">أعلى نسبة</option><option value="per_kg">أعلى ربح/كجم</option></select>
+        </label>
+        <label>الداتا من
+          <select id="p-src"><option value="me">جهازي بس</option><option value="me,live">جهازي + اللايف (صاحبي وغيره)</option></select>
+        </label>
+        <label>مش أقدم من
+          <select id="p-age"><option value="0.25">ربع ساعة</option><option value="0.5">نص ساعة</option><option value="1" selected>ساعة</option><option value="2">ساعتين</option></select>
+        </label>
+      </div>
+      <div class="hint">الخطة بتاخد بس الأسعار اللي اتسكنت فعلاً في آخر وقت انت محدده، بالكميات الحقيقية. مفيش فيها أي داتا عامة ممكن تكون قديمة. لازم تكون عملت سكان للايتم في المدينة وفي البلاك ماركت الاتنين.</div>
+      <div id="plan-out"></div>
+    </div>
+  </section>
+</main>
+
+<div class="drawer-bg" id="drawer-bg" hidden></div>
+<aside class="drawer" id="drawer" hidden>
+  <button class="x" id="drawer-x" aria-label="اقفل">×</button>
+  <div id="drawer-body"></div>
+</aside>
+
+<div class="toast" id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
