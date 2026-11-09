@@ -132,6 +132,8 @@ def opportunities(store, items, premium=False, mode="instant", max_age_h=6, min_
                     "per_kg": round(b["profit"] / meta["weight"]) if meta["weight"] else None,
                     "sold_day": round(vol[0], 1) if vol else None,
                     "depth": depth,
+                    # every BM order price by quality: lets the page show what a reroll could earn
+                    "bm_q_prices": {str(k): v[0] for k, v in bm_orders.items()},
                     # how much this item can make in total (all units you can really flip)
                     "qty": depth["qty"] if depth else 1,
                     "total": max(depth["profit"], b["profit"]) if depth else b["profit"],

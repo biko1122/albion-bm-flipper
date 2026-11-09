@@ -124,6 +124,8 @@ table.grid { width: 100%; border-collapse: collapse; }
 .btn.danger:hover { border-color: var(--red); }
 .total { color: var(--gold-2); font-weight: 700; font-size: 15px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.reroll { display: block; font-size: 11px; color: var(--gold-2); margin-top: 2px; }
+.board td.up { color: var(--gold-2); }
 .city-head { margin: 16px 0 6px; font-weight: 700; color: var(--gold-2); }
 
 /* ---------- drawer ---------- */

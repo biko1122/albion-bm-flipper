@@ -12,7 +12,33 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;"
 const DEFAULTS = {
   premium: false, mode: "instant", age: 6, cities: null, tiers: [4, 5, 6, 7, 8], ench: [0, 1, 2, 3, 4],
   cats: Object.keys(CATS), minprofit: 5000, minmargin: 5, maxbuy: "", minsold: 0, best: true, sort: "total",
+  rerollOn: true, rerollPct: 10, rerollAll: false,
 };
+
+/* What the same item would earn if its quality went up (reroll). Uses the BM buy order each
+   higher quality can fill (quality or lower). Exact integer math, same rounding as the server. */
+function rerollOptions(r) {
+  const prices = r.bm_q_prices || {}, tax = taxPct(), out = [];
+  let prev = r.bm_price;
+  for (let up = r.q + 1; up <= 5; up++) {
+    let best = 0, bestQ = 0;
+    for (const [q, p] of Object.entries(prices)) if (+q <= up && p > best) { best = p; bestQ = +q; }
+    if (best <= prev) continue;   // same order as a lower quality: nothing new to show
+    prev = best;
+    const costMilli = r.buy_price * (S.mode === "order" ? 1025 : 1000);
+    const profit = Math.floor((best * (100 - tax) * 10 - costMilli) / 1000);
+    const gain = profit - r.profit;
+    out.push({ up, orderQ: bestQ, price: best, profit, gain, pct: r.profit > 0 ? (gain / r.profit) * 100 : Infinity });
+  }
+  return out;
+}
+function rerollBadge(r) {
+  if (!S.rerollOn) return "";
+  const opts = rerollOptions(r).filter(o => o.pct >= (+S.rerollPct || 0));
+  if (!opts.length) return "";
+  const show = S.rerollAll ? opts : [opts.reduce((a, b) => (b.gain > a.gain ? b : a))];
+  return show.map(o => `<span class="reroll" title="لو الكواليتي طلعت ${QA[o.up]}: البلاك بيدفع ${fmt(o.price)} والربح ${fmt(o.profit)}">🎲 لو طلع ${QA[o.up]}: +${fmt(o.gain)}</span>`).join("");
+}
 let S = load();
 let rows = [], cities = [], filtered = [], limit = 150, polling = null, tab = "list", lastSeen = "";
 
@@ -73,6 +99,11 @@ function initFilters() {
   }
   const best = $("#f-best"); best.checked = S.best;
   best.onchange = () => { S.best = best.checked; save(); applyAll(); };
+  const rOn = $("#f-reroll-on"), rPct = $("#f-reroll"), rAll = $("#f-reroll-all");
+  rOn.checked = S.rerollOn; rPct.value = S.rerollPct; rAll.checked = S.rerollAll;
+  rOn.onchange = () => { S.rerollOn = rOn.checked; save(); renderTable(); };
+  rPct.oninput = () => { S.rerollPct = rPct.value; save(); renderTable(); };
+  rAll.onchange = () => { S.rerollAll = rAll.checked; save(); renderTable(); };
   $("#f-search").oninput = () => applyAll();
   $("#p-city").innerHTML = cities.map(c => `<option>${c}</option>`).join("");
   for (const id of ["#p-city", "#p-budget", "#p-weight", "#p-sort"]) $(id).oninput = renderPlan;
@@ -162,7 +193,7 @@ function renderTable() {
     <td>${r.city}<span class="age ${r.city === "Caerleon" ? "safe" : "risk"}">${r.city === "Caerleon" ? "جنب البلاك ماركت" : "رحلة لكارليون"}</span></td>
     <td class="num">${priceCell(r.buy_price, r.buy_at, r.buy_src, r.buy_amount)}</td>
     <td class="num">${priceCell(r.bm_price, r.bm_at, r.bm_src, r.bm_amount, r.bm_q !== r.q ? `<span class="age muted">أوردر ${QA[r.bm_q]}</span>` : "")}</td>
-    <td class="num"><span class="profit">${fmt(r.profit)}</span><span class="age muted">ضريبة ${fmt(r.tax + r.setup_fee)}</span></td>
+    <td class="num"><span class="profit">${fmt(r.profit)}</span><span class="age muted">ضريبة ${fmt(r.tax + r.setup_fee)}</span>${rerollBadge(r)}</td>
     <td class="num">${r.depth ? `<b>${r.qty}</b>` : '<span class="muted" title="مش معروف: اعمل سكان للايتم في المدينة والبلاك ماركت">1؟</span>'}</td>
     <td class="num"><span class="total">${fmt(r.total)}</span>${r.depth ? `<span class="age muted">تدفع ${fmt(r.total_cost)}</span>` : ""}</td>
     <td class="num">${(r.margin * 100).toFixed(1)}%${r.margin > 1 ? '<span class="age old">رخيص زيادة؟ اتأكد</span>' : ""}</td>
@@ -196,6 +227,16 @@ function totals(r, n) {
   const revCenti = r.bm_price * n * (100 - taxPct());    // exact, in 1/100 silver
   return { cost: Math.ceil(costMilli / 1000), receive: Math.floor(revCenti / 100), profit: Math.floor((revCenti * 10 - costMilli) / 1000) };
 }
+function rerollTable(r) {
+  const opts = rerollOptions(r);
+  if (!opts.length) return "";
+  return `<h4 style="margin-top:12px">🎲 لو عملت رول والكواليتي علت</h4>
+    <table class="board"><thead><tr><th>لو طلع</th><th>أحسن أوردر يقبله</th><th>الربح</th><th>زيادة</th></tr></thead><tbody>
+    ${opts.map(o => `<tr><td class="q${o.up}">${QA[o.up]} (${QN[o.up]})</td><td class="mono">${fmt(o.price)} <span class="muted">(أوردر ${QA[o.orderQ]})</span></td>
+      <td class="mono profit">${fmt(o.profit)}</td><td class="mono up">+${fmt(o.gain)}${isFinite(o.pct) ? ` (${o.pct.toFixed(0)}%)` : ""}</td></tr>`).join("")}
+    </tbody></table>
+    <div class="note">ده الربح لو الكواليتي طلعت أعلى بعد الرول، بنفس سعر الشرا. تكلفة الرول نفسه مش محسوبة، والكواليتي مش مضمونة.</div>`;
+}
 async function openDrawer(r) {
   $("#drawer").hidden = $("#drawer-bg").hidden = false;
   const body = $("#drawer-body");
@@ -217,6 +258,7 @@ async function openDrawer(r) {
       <div class="row"><span>ضريبة البيع ${taxPct()}%</span><span class="num">− ${fmt(r.tax)}</span></div>
       <div class="row"><span>اللي هيدخل جيبك</span><span class="num">${fmt(r.receive)}</span></div>
       <div class="row total"><span>صافي الربح</span><span class="num profit">${fmt(r.profit)} (${(r.margin * 100).toFixed(2)}%)</span></div>
+      ${rerollTable(r)}
       <div class="qty"><span>لو جبت</span><input type="number" id="qty" value="1" min="1"><span>قطعة بنفس السعر:</span><b class="num" id="qty-out"></b></div>
       <div class="note" id="qty-note"></div>
     </div>` : `<div class="calc"><h4>لسه محتاج سكان</h4>
